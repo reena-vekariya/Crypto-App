@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'auth_token';
+const BIOMETRIC_KEY = 'biometric_enabled';
 
 interface UserProfile {
   id: string;
@@ -16,9 +17,11 @@ interface AuthStore {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  biometricEnabled: boolean;
   setAuth: (token: string, user: UserProfile) => Promise<void>;
   logout: () => Promise<void>;
   loadToken: () => Promise<void>;
+  setBiometricEnabled: (enabled: boolean) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -26,6 +29,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  biometricEnabled: false,
 
   setAuth: async (token, user) => {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -39,14 +43,23 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   loadToken: async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (token) {
-        set({ token, isAuthenticated: true, isLoading: false });
-      } else {
-        set({ isLoading: false });
-      }
+      const [token, biometric] = await Promise.all([
+        SecureStore.getItemAsync(TOKEN_KEY),
+        SecureStore.getItemAsync(BIOMETRIC_KEY),
+      ]);
+      set({
+        token: token ?? null,
+        isAuthenticated: !!token,
+        biometricEnabled: biometric === 'true',
+        isLoading: false,
+      });
     } catch {
       set({ isLoading: false });
     }
+  },
+
+  setBiometricEnabled: async (enabled) => {
+    await SecureStore.setItemAsync(BIOMETRIC_KEY, String(enabled));
+    set({ biometricEnabled: enabled });
   },
 }));

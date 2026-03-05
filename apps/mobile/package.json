@@ -18,6 +18,8 @@
     "ethers": "^6.13.4",
     "expo": "~55.0.4",
     "expo-camera": "*",
+    "expo-clipboard": "^55.0.8",
+    "expo-constants": "^55.0.7",
     "expo-font": "*",
     "expo-local-authentication": "*",
     "expo-router": "*",

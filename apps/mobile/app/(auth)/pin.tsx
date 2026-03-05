@@ -1,35 +1,67 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../../hooks/useTheme';
 import { Colors } from '../../constants/colors';
 
 const PIN_LENGTH = 6;
+const PIN_KEY = 'user_pin';
+
+type Stage = 'set' | 'confirm';
 
 export default function PinScreen() {
   const { colors } = useTheme();
+  const [stage, setStage] = useState<Stage>('set');
   const [pin, setPin] = useState<string[]>([]);
+  const [savedPin, setSavedPin] = useState('');
+  const [error, setError] = useState('');
 
-  const handlePress = (digit: string) => {
-    if (pin.length < PIN_LENGTH) {
-      const newPin = [...pin, digit];
-      setPin(newPin);
-      if (newPin.length === PIN_LENGTH) {
-        // PIN complete — navigate forward
-        setTimeout(() => router.replace('/(tabs)'), 300);
+  const handlePress = async (digit: string) => {
+    if (pin.length >= PIN_LENGTH) return;
+    const updated = [...pin, digit];
+    setPin(updated);
+    setError('');
+
+    if (updated.length < PIN_LENGTH) return;
+
+    const entered = updated.join('');
+
+    if (stage === 'set') {
+      setSavedPin(entered);
+      setTimeout(() => {
+        setPin([]);
+        setStage('confirm');
+      }, 300);
+    } else {
+      if (entered !== savedPin) {
+        setError('PINs do not match. Try again.');
+        setTimeout(() => {
+          setPin([]);
+          setStage('set');
+          setSavedPin('');
+        }, 400);
+        return;
       }
+      await SecureStore.setItemAsync(PIN_KEY, entered);
+      setTimeout(() => router.replace('/(tabs)'), 200);
     }
   };
 
   const handleDelete = () => {
-    setPin(pin.slice(0, -1));
+    setPin((prev) => prev.slice(0, -1));
+    setError('');
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Enter PIN</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        {stage === 'set' ? 'Set PIN' : 'Confirm PIN'}
+      </Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Set up a 6-digit PIN to secure your account
+        {stage === 'set'
+          ? 'Create a 6-digit PIN to secure your account'
+          : 'Re-enter your PIN to confirm'}
       </Text>
 
       {/* Dots */}
@@ -39,12 +71,21 @@ export default function PinScreen() {
             key={i}
             style={[
               styles.dot,
-              { borderColor: colors.border },
-              i < pin.length && { backgroundColor: Colors.primary, borderColor: Colors.primary },
+              { borderColor: error ? Colors.error : colors.border },
+              i < pin.length && {
+                backgroundColor: error ? Colors.error : Colors.primary,
+                borderColor: error ? Colors.error : Colors.primary,
+              },
             ]}
           />
         ))}
       </View>
+
+      {error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : (
+        <View style={{ height: 22 }} />
+      )}
 
       {/* Keypad */}
       <View style={styles.keypad}>
@@ -80,20 +121,17 @@ export default function PinScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   title: { fontSize: 26, fontWeight: '700', marginBottom: 8 },
-  subtitle: { fontSize: 14, textAlign: 'center', marginBottom: 40 },
-  dotsRow: { flexDirection: 'row', gap: 16, marginBottom: 48 },
-  dot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-  },
+  subtitle: { fontSize: 14, textAlign: 'center', marginBottom: 36 },
+  dotsRow: { flexDirection: 'row', gap: 16, marginBottom: 12 },
+  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2 },
+  errorText: { fontSize: 13, color: Colors.error, marginBottom: 10, textAlign: 'center' },
   keypad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     width: 280,
     gap: 12,
     justifyContent: 'center',
+    marginTop: 16,
   },
   key: {
     width: 80,

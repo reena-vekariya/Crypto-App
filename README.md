@@ -1,7 +1,6 @@
-# Crypto App — CoinBase Clone
+# Crypto App
 
-A production-ready, full-stack cryptocurrency app monorepo built with NestJS, React Native (Expo), and MySQL. Inspired by CoinBase's design and functionality.
-
+A production-ready, full-stack cryptocurrency app monorepo built with NestJS, React Native (Expo), and MySQL. 
 ---
 
 ## Tech Stack
@@ -314,8 +313,3 @@ lsof -ti:3001 | xargs kill -9 2>/dev/null
 - CORS is open in development — restrict `origin` in production
 - Never commit `.env` files — they are gitignored
 
----
-
-## License
-
-MIT
